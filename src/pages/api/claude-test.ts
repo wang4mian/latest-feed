@@ -229,5 +229,3 @@ async function testCompilation(data: any) {
     headers: { 'Content-Type': 'application/json' }
   })
 }
-  </script>
-</Layout>

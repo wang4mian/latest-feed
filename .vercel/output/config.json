@@ -1,0 +1,83 @@
+{
+	"version": 3,
+	"routes": [
+		{
+			"src": "^/_astro/(.*)$",
+			"headers": {
+				"cache-control": "public, max-age=31536000, immutable"
+			},
+			"continue": true
+		},
+		{
+			"handle": "filesystem"
+		},
+		{
+			"src": "^\\/_image$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/articles\\/update\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/articles\\/([^/]+?)\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/articles\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/claude-test\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/process-rss\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/rss-sources\\/import\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/stats\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/test-crawl\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/workbench\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/articles\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/rss-sources\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/test\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/workbench\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/workbench-old\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/$",
+			"dest": "_render"
+		}
+	]
+}

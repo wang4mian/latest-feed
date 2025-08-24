@@ -1,0 +1,347 @@
+---
+import Layout from '@/layouts/Layout.astro'
+import { supabase } from '@/lib/supabase'
+
+// 获取URL参数中的文章ID
+const url = Astro.url
+const articleId = url.searchParams.get('article')
+
+// 如果有文章ID，获取文章详情
+let currentArticle = null
+if (articleId) {
+  const { data } = await supabase
+    .from('articles')
+    .select('*')
+    .eq('id', articleId)
+    .single()
+  currentArticle = data
+}
+
+// 获取已采用的文章列表
+const { data: adoptedArticles } = await supabase
+  .from('articles')
+  .select('*')
+  .eq('editor_action', 'adopted')
+  .order('created_at', { ascending: false })
+  .limit(20)
+---
+
+<Layout title="编辑台 - 制造业情报系统">
+  <div class="h-screen flex flex-col">
+    
+    <!-- 顶部工具栏 -->
+    <div class="bg-white border-b border-gray-200 px-6 py-4 flex-shrink-0">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+          <h1 class="text-xl font-bold text-gray-900">✏️ 编辑台</h1>
+          {currentArticle && (
+            <span class="text-sm text-gray-500">
+              正在编辑: {currentArticle.raw_content?.title?.substring(0, 50) || '无标题'}...
+            </span>
+          )}
+        </div>
+        
+        <div class="flex items-center space-x-3">
+          {currentArticle && (
+            <>
+              <button id="save-article" class="px-4 py-2 bg-green-500 text-white text-sm rounded hover:bg-green-600">
+                💾 保存
+              </button>
+              <button id="mark-compiled" class="px-4 py-2 bg-blue-500 text-white text-sm rounded hover:bg-blue-600">
+                ✅ 标记已编译
+              </button>
+            </>
+          )}
+          <a href="/articles" class="px-4 py-2 bg-gray-500 text-white text-sm rounded hover:bg-gray-600">
+            📰 返回文章池
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- 主要内容区域 -->
+    <div class="flex-1 flex overflow-hidden">
+      
+      <!-- 左侧文章列表 -->
+      <div class="w-1/4 bg-gray-50 border-r border-gray-200 overflow-y-auto">
+        <div class="p-4">
+          <h3 class="font-medium text-gray-900 mb-4">📋 待编辑文章</h3>
+          <div class="space-y-2">
+            {adoptedArticles?.map(article => {
+              const isActive = articleId === article.id
+              
+              // 解析ai_analysis JSON字符串
+              let aiAnalysis = {}
+              try {
+                aiAnalysis = typeof article.ai_analysis === 'string' ? 
+                  JSON.parse(article.ai_analysis) : 
+                  article.ai_analysis || {}
+              } catch (e) {
+                aiAnalysis = article.ai_analysis || {}
+              }
+              
+              const valueScore = aiAnalysis.value_score || 0
+              
+              return (
+                <a 
+                  href={`/workbench?article=${article.id}`}
+                  class={`block p-3 rounded-lg border transition-colors ${
+                    isActive 
+                      ? 'bg-blue-100 border-blue-300 text-blue-900' 
+                      : 'bg-white border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs text-gray-500">
+                      {new Date(article.created_at).toLocaleDateString('zh-CN')}
+                    </span>
+                    {valueScore > 0 && (
+                      <span class={`text-xs px-2 py-1 rounded ${
+                        valueScore >= 8 ? 'bg-green-100 text-green-800' :
+                        valueScore >= 6 ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                        {valueScore}/10
+                      </span>
+                    )}
+                  </div>
+                  <h4 class="text-sm font-medium text-gray-900 line-clamp-2 mb-1">
+                    {article.raw_content?.headline || article.raw_content?.title || '无标题'}
+                  </h4>
+                  <p class="text-xs text-gray-600 line-clamp-2">
+                    {aiAnalysis?.initial_translation?.substring(0, 100) || aiAnalysis?.summary?.substring(0, 100) || '暂无摘要'}...
+                  </p>
+                  <div class="mt-2">
+                    <span class={`text-xs px-2 py-1 rounded ${
+                      article.editor_action === 'compiled' ? 'bg-purple-100 text-purple-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {article.editor_action === 'compiled' ? '已编译' : '待编译'}
+                    </span>
+                  </div>
+                </a>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
+      <!-- 右侧编辑器区域 -->
+      <div class="flex-1 flex flex-col">
+        {currentArticle ? (
+          <>
+            <!-- 文章信息 -->
+            <div class="bg-white border-b border-gray-200 p-4 flex-shrink-0">
+              <h2 class="text-lg font-semibold text-gray-900 mb-2">
+                {currentArticle.raw_content?.headline || currentArticle.raw_content?.title || '无标题'}
+              </h2>
+              <div class="flex items-center space-x-4 text-sm text-gray-600">
+                <span>📅 {new Date(currentArticle.created_at).toLocaleDateString('zh-CN')}</span>
+                <span>⭐ {(typeof currentArticle.ai_analysis === 'string' ? JSON.parse(currentArticle.ai_analysis) : currentArticle.ai_analysis)?.value_score || 0}/10</span>
+                <span class={`px-2 py-1 rounded text-xs ${
+                  currentArticle.editor_action === 'compiled' ? 'bg-purple-100 text-purple-800' :
+                  'bg-yellow-100 text-yellow-800'
+                }`}>
+                  {currentArticle.editor_action || 'adopted'}
+                </span>
+                <a href={currentArticle.source_url} target="_blank" class="text-blue-600 hover:underline">
+                  🔗 原文链接
+                </a>
+              </div>
+              {(() => {
+                const analysis = typeof currentArticle.ai_analysis === 'string' ? 
+                  JSON.parse(currentArticle.ai_analysis) : currentArticle.ai_analysis
+                const summary = analysis?.initial_translation || analysis?.summary
+                return summary && (
+                  <div class="mt-3 p-3 bg-gray-50 rounded-lg">
+                    <p class="text-sm text-gray-700">
+                      <strong>AI摘要:</strong> {summary}
+                    </p>
+                  </div>
+                )
+              })()}
+            </div>
+
+            <!-- Doocs MD 编辑器 -->
+            <div class="flex-1 bg-white">
+              <iframe 
+                id="editor-iframe" 
+                src="/doocs-editor.html" 
+                class="w-full h-full border-0"
+                style="min-height: 500px;"
+              ></iframe>
+            </div>
+          </>
+        ) : (
+          <!-- 未选择文章时的提示 -->
+          <div class="flex-1 flex items-center justify-center bg-gray-50">
+            <div class="text-center">
+              <span class="text-6xl mb-4 block">📝</span>
+              <h3 class="text-xl font-medium text-gray-900 mb-2">选择文章开始编辑</h3>
+              <p class="text-gray-600 mb-4">从左侧列表选择一篇已采用的文章进行编译</p>
+              <a href="/articles" class="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+                📰 前往文章池
+              </a>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+
+  </div>
+
+  <script define:vars={{ currentArticle }}>
+    // 编辑器相关功能
+    let editorIframe = null
+    let isEditorReady = false
+
+    if (currentArticle) {
+      // 等待编辑器加载
+      document.addEventListener('DOMContentLoaded', () => {
+        editorIframe = document.getElementById('editor-iframe')
+        
+        if (editorIframe) {
+          editorIframe.onload = function() {
+            setTimeout(() => {
+              initializeEditor()
+            }, 1000)
+          }
+        }
+      })
+
+      // 初始化编辑器内容
+      function initializeEditor() {
+        if (!editorIframe) return
+
+        // 准备初始内容
+        let initialContent = currentArticle.final_content || ''
+        
+        // 如果没有最终内容，使用模板
+        if (!initialContent) {
+          const analysis = typeof currentArticle.ai_analysis === 'string' ? 
+            JSON.parse(currentArticle.ai_analysis) : currentArticle.ai_analysis
+          const rawContent = currentArticle.raw_content
+          
+          initialContent = `# ${rawContent?.headline || rawContent?.title || '标题'}
+
+## 📋 文章概要
+
+${analysis?.initial_translation || analysis?.summary || '暂无摘要'}
+
+## 🔍 核心要点
+
+${analysis?.key_points ? analysis.key_points.map(point => `- ${point}`).join('\n') : '暂无要点'}
+
+## 💼 商业影响
+
+${analysis?.business_impact || '暂无商业影响分析'}
+
+## 🎯 目标受众
+
+${analysis?.target_audience_tags ? analysis.target_audience_tags.join('、') : '暂无目标受众'}
+
+## 📈 价值评分
+
+**评分:** ${analysis?.value_score || 0}/10
+
+**评分原因:** ${analysis?.score_reason || '暂无评分说明'}
+
+---
+
+*文章来源: [原文链接](${currentArticle.source_url})*
+*AI评分: ${analysis?.value_score || 0}/10*
+*编辑时间: ${new Date().toLocaleString('zh-CN')}*`
+        }
+
+        // 发送内容到编辑器
+        editorIframe.contentWindow.postMessage({
+          source: 'parent',
+          action: 'setContent',
+          data: initialContent
+        }, '*')
+
+        isEditorReady = true
+      }
+
+      // 监听编辑器消息
+      window.addEventListener('message', (event) => {
+        if (event.data.source === 'doocs-editor') {
+          if (event.data.action === 'ready') {
+            isEditorReady = true
+          } else if (event.data.action === 'contentResponse') {
+            // 处理编辑器返回的内容
+            handleEditorContent(event.data.data)
+          }
+        }
+      })
+
+      // 保存文章
+      document.getElementById('save-article')?.addEventListener('click', async () => {
+        if (!isEditorReady || !editorIframe) return
+        
+        // 请求编辑器内容
+        editorIframe.contentWindow.postMessage({
+          source: 'parent',
+          action: 'getContent'
+        }, '*')
+      })
+
+      // 标记为已编译
+      document.getElementById('mark-compiled')?.addEventListener('click', async () => {
+        if (!isEditorReady || !editorIframe) return
+        
+        // 请求编辑器内容并标记为已编译
+        editorIframe.contentWindow.postMessage({
+          source: 'parent',
+          action: 'getContent'
+        }, '*')
+        
+        // 设置标志，下次收到内容时标记为已编译
+        document.shouldMarkCompiled = true
+      })
+
+      // 处理编辑器内容
+      async function handleEditorContent(content) {
+        try {
+          const shouldCompile = document.shouldMarkCompiled || false
+          document.shouldMarkCompiled = false
+
+          const response = await fetch('/api/articles/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: currentArticle.id,
+              final_content: content,
+              editor_action: shouldCompile ? 'compiled' : currentArticle.editor_action,
+              status: shouldCompile ? 'compiled' : currentArticle.status
+            })
+          })
+
+          if (response.ok) {
+            if (shouldCompile) {
+              alert('文章已标记为编译完成！')
+              // 跳转到文章池查看结果
+              window.location.href = '/articles'
+            } else {
+              alert('内容已保存！')
+            }
+          } else {
+            alert('保存失败')
+          }
+        } catch (error) {
+          console.error('保存失败:', error)
+          alert('保存失败')
+        }
+      }
+    }
+  </script>
+
+  <style>
+    .line-clamp-2 {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+  </style>
+</Layout>
