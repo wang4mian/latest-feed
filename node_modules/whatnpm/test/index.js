@@ -1,0 +1,6 @@
+const { manager } = require(`../index.js`)
+const res = manager()
+console.log(`runRes: `)
+console.log(res.runRes)
+console.log(`dir: ${res.dir}`)
+console.log(`er: ${res.er}`)
