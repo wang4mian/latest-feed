@@ -1,0 +1,488 @@
+---
+import Layout from '@/layouts/Layout.astro'
+import { supabase } from '@/lib/supabase'
+
+// 获取RSS资源数据
+const { data: rssResources } = await supabase
+  .from('rss_resources')
+  .select('*')
+  .order('success_rate', { ascending: false })
+
+// 从URL参数获取筛选条件
+const url = Astro.url
+const categoryFilter = url.searchParams.get('category') || 'all'
+const statusFilter = url.searchParams.get('status') || 'all'
+const regionFilter = url.searchParams.get('region') || 'all'
+const strategyFilter = url.searchParams.get('strategy') || 'all'
+
+// 获取筛选选项
+const categories = [...new Set(rssResources?.map(r => r.category).filter(Boolean) || [])]
+const regions = [...new Set(rssResources?.map(r => r.region).filter(Boolean) || [])]
+const strategies = [...new Set(rssResources?.map(r => r.crawl_strategy).filter(Boolean) || [])]
+
+// 应用筛选条件
+let filteredResources = rssResources || []
+if (categoryFilter !== 'all') {
+  filteredResources = filteredResources.filter(r => r.category === categoryFilter)
+}
+if (statusFilter !== 'all') {
+  const isActive = statusFilter === 'active'
+  filteredResources = filteredResources.filter(r => r.is_active === isActive)
+}
+if (regionFilter !== 'all') {
+  filteredResources = filteredResources.filter(r => r.region === regionFilter)
+}
+if (strategyFilter !== 'all') {
+  filteredResources = filteredResources.filter(r => r.crawl_strategy === strategyFilter)
+}
+
+// 统计数据
+const totalSources = rssResources?.length || 0
+const activeSources = rssResources?.filter(r => r.is_active).length || 0
+const filteredCount = filteredResources.length
+---
+
+<Layout title="RSS源管理 - 制造业情报系统">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    
+    <!-- 页面标题 -->
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900">📡 RSS源管理</h1>
+      <p class="mt-2 text-gray-600">管理和监控制造业情报RSS源</p>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+          <div class="p-2 bg-blue-100 rounded-lg">
+            <span class="text-2xl">📡</span>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm font-medium text-gray-600">总RSS源</p>
+            <p class="text-2xl font-semibold text-gray-900">{totalSources}</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+          <div class="p-2 bg-green-100 rounded-lg">
+            <span class="text-2xl">✅</span>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm font-medium text-gray-600">激活源</p>
+            <p class="text-2xl font-semibold text-gray-900">{activeSources}</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+          <div class="p-2 bg-yellow-100 rounded-lg">
+            <span class="text-2xl">🔍</span>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm font-medium text-gray-600">筛选结果</p>
+            <p class="text-2xl font-semibold text-gray-900">{filteredCount}</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+          <div class="p-2 bg-purple-100 rounded-lg">
+            <span class="text-2xl">📊</span>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm font-medium text-gray-600">健康度</p>
+            <p class="text-2xl font-semibold text-gray-900">
+              {totalSources > 0 ? Math.round((activeSources / totalSources) * 100) : 0}%
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 筛选面板 -->
+    <div class="bg-white shadow rounded-lg mb-6 p-6">
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+        
+        <!-- 分类筛选 -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">分类</label>
+          <select id="category-filter" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+            <option value="all">全部分类</option>
+            {categories.map(category => (
+              <option value={category} selected={categoryFilter === category}>
+                {category}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <!-- 状态筛选 -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">状态</label>
+          <select id="status-filter" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+            <option value="all">全部状态</option>
+            <option value="active" selected={statusFilter === 'active'}>激活</option>
+            <option value="inactive" selected={statusFilter === 'inactive'}>未激活</option>
+          </select>
+        </div>
+
+        <!-- 地区筛选 -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">地区</label>
+          <select id="region-filter" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+            <option value="all">全部地区</option>
+            {regions.map(region => (
+              <option value={region} selected={regionFilter === region}>
+                {region}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <!-- 抓取策略筛选 -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">抓取策略</label>
+          <select id="strategy-filter" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+            <option value="all">全部策略</option>
+            {strategies.map(strategy => (
+              <option value={strategy} selected={strategyFilter === strategy}>
+                {strategy}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="flex items-end">
+          <button id="apply-filters" class="w-full px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">
+            应用筛选
+          </button>
+        </div>
+      </div>
+      
+      <!-- 操作按钮行 -->
+      <div class="flex space-x-4 mt-4 pt-4 border-t border-gray-200">
+        <button id="test-all-sources" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600">
+          测试所有源
+        </button>
+        <button id="health-check" class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600">
+          健康检查
+        </button>
+        <button id="refresh-data" class="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600">
+          刷新数据
+        </button>
+        <button id="add-source" class="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600">
+          添加源
+        </button>
+      </div>
+    </div>
+
+    <!-- RSS源列表 -->
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h3 class="text-lg font-medium text-gray-900">
+          RSS源列表 ({filteredCount} 条记录)
+        </h3>
+      </div>
+      
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                源信息
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                分类
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                地区
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                抓取策略
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                状态
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                成功率
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                操作
+              </th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            {filteredResources.map(source => (
+              <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                      <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-gray-500">
+                        <span class="text-sm font-medium leading-none text-white">
+                          {source.name?.charAt(0) || 'R'}
+                        </span>
+                      </span>
+                    </div>
+                    <div class="ml-4 min-w-0">
+                      <div class="text-sm font-medium text-gray-900 truncate max-w-xs">
+                        {source.name}
+                      </div>
+                      <div class="text-sm text-gray-500 truncate max-w-xs">
+                        {source.url}
+                      </div>
+                      {source.description && (
+                        <div class="text-xs text-gray-400 mt-1 max-w-xs truncate">
+                          {source.description}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    source.category === 'Technology' ? 'bg-blue-100 text-blue-800' :
+                    source.category === 'Business' ? 'bg-green-100 text-green-800' :
+                    source.category === 'Policy' ? 'bg-purple-100 text-purple-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {source.category}
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {source.region}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    source.crawl_strategy === 'google_news' ? 'bg-yellow-100 text-yellow-800' :
+                    source.crawl_strategy === 'anti_scraping' ? 'bg-red-100 text-red-800' :
+                    source.crawl_strategy === 'javascript_heavy' ? 'bg-orange-100 text-orange-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {source.crawl_strategy}
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    source.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
+                    <span class={`w-1.5 h-1.5 rounded-full mr-1 ${
+                      source.is_active ? 'bg-green-400' : 'bg-red-400'
+                    }`}></span>
+                    {source.is_active ? '激活' : '未激活'}
+                  </span>
+                  <div class="text-xs text-gray-500 mt-1">
+                    {source.last_fetch ? `最后抓取: ${new Date(source.last_fetch).toLocaleDateString('zh-CN')}` : '未抓取'}
+                  </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {source.success_rate ? (
+                    <div class="flex items-center">
+                      <div class="flex-1">
+                        <div class="flex items-center justify-between text-xs mb-1">
+                          <span>{source.success_rate}%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-1.5">
+                          <div 
+                            class={`h-1.5 rounded-full ${
+                              source.success_rate >= 80 ? 'bg-green-400' :
+                              source.success_rate >= 60 ? 'bg-yellow-400' :
+                              'bg-red-400'
+                            }`}
+                            style={`width: ${source.success_rate}%`}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <span class="text-gray-500">-</span>
+                  )}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <div class="flex space-x-2">
+                    <button 
+                      onclick={`testSource('${source.id}')`}
+                      class="text-blue-600 hover:text-blue-900 text-xs bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded"
+                    >
+                      测试
+                    </button>
+                    <button 
+                      onclick={`toggleSource('${source.id}', ${!source.is_active})`}
+                      class={`text-xs px-2 py-1 rounded ${
+                        source.is_active 
+                          ? 'text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100' 
+                          : 'text-green-600 hover:text-green-900 bg-green-50 hover:bg-green-100'
+                      }`}
+                    >
+                      {source.is_active ? '停用' : '启用'}
+                    </button>
+                    <button 
+                      onclick={`editSource('${source.id}')`}
+                      class="text-gray-600 hover:text-gray-900 text-xs bg-gray-50 hover:bg-gray-100 px-2 py-1 rounded"
+                    >
+                      编辑
+                    </button>
+                  </div>
+                  <div class={`test-status-${source.id} text-xs mt-1`}></div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      
+      {filteredResources.length === 0 && (
+        <div class="text-center py-12">
+          <span class="text-4xl mb-4 block">📭</span>
+          <p class="text-gray-500">没有找到符合条件的RSS源</p>
+        </div>
+      )}
+    </div>
+
+    <!-- 测试结果面板 -->
+    <div id="test-results" class="hidden mt-8 bg-white shadow rounded-lg">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h3 class="text-lg font-medium text-gray-900">测试结果</h3>
+      </div>
+      <div id="test-results-content" class="p-6 max-h-96 overflow-y-auto">
+      </div>
+    </div>
+
+  </div>
+
+  <script define:vars={{ rssResourcesData: filteredResources }}>
+    // 筛选功能
+    document.getElementById('apply-filters').addEventListener('click', () => {
+      const category = document.getElementById('category-filter').value
+      const status = document.getElementById('status-filter').value
+      const region = document.getElementById('region-filter').value
+      const strategy = document.getElementById('strategy-filter').value
+      
+      const params = new URLSearchParams()
+      if (category !== 'all') params.append('category', category)
+      if (status !== 'all') params.append('status', status)
+      if (region !== 'all') params.append('region', region)
+      if (strategy !== 'all') params.append('strategy', strategy)
+      
+      window.location.href = `/test?${params.toString()}`
+    })
+
+    // 测试单个源
+    async function testSource(sourceId) {
+      const statusElement = document.querySelector(`.test-status-${sourceId}`)
+      statusElement.textContent = '测试中...'
+      statusElement.className = 'test-status-' + sourceId + ' text-xs mt-1 text-yellow-600'
+      
+      try {
+        const response = await fetch('/api/test-crawl', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sourceId })
+        })
+        
+        const result = await response.json()
+        
+        if (result.success) {
+          statusElement.textContent = '✅ 成功'
+          statusElement.className = 'test-status-' + sourceId + ' text-xs mt-1 text-green-600'
+        } else {
+          statusElement.textContent = '❌ 失败'
+          statusElement.className = 'test-status-' + sourceId + ' text-xs mt-1 text-red-600'
+        }
+        
+        showTestResult(sourceId, result)
+        
+      } catch (error) {
+        statusElement.textContent = '❌ 错误'
+        statusElement.className = 'test-status-' + sourceId + ' text-xs mt-1 text-red-600'
+        console.error('测试失败:', error)
+      }
+    }
+
+    // 切换源状态
+    async function toggleSource(sourceId, newStatus) {
+      try {
+        const response = await fetch('/api/rss-sources/toggle', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sourceId, isActive: newStatus })
+        })
+        
+        if (response.ok) {
+          location.reload()
+        } else {
+          alert('操作失败')
+        }
+      } catch (error) {
+        console.error('切换状态失败:', error)
+        alert('操作失败')
+      }
+    }
+
+    // 编辑源
+    function editSource(sourceId) {
+      // TODO: 实现编辑功能
+      alert(`编辑源: ${sourceId}`)
+    }
+
+    // 测试所有源
+    document.getElementById('test-all-sources').addEventListener('click', async () => {
+      const activeSourceIds = rssResourcesData.filter(s => s.is_active).map(s => s.id)
+      
+      for (const sourceId of activeSourceIds) {
+        await testSource(sourceId)
+        await new Promise(resolve => setTimeout(resolve, 1000)) // 避免过于频繁的请求
+      }
+    })
+    
+    // 健康检查
+    document.getElementById('health-check').addEventListener('click', async () => {
+      try {
+        const response = await fetch('/api/test-crawl?action=health')
+        const result = await response.json()
+        showTestResult('health-check', result)
+      } catch (error) {
+        console.error('健康检查失败:', error)
+      }
+    })
+
+    // 刷新数据
+    document.getElementById('refresh-data').addEventListener('click', () => {
+      location.reload()
+    })
+
+    // 添加源
+    document.getElementById('add-source').addEventListener('click', () => {
+      // TODO: 实现添加源功能
+      alert('添加新RSS源功能开发中...')
+    })
+    
+    // 显示测试结果
+    function showTestResult(sourceId, result) {
+      const resultsPanel = document.getElementById('test-results')
+      const resultsContent = document.getElementById('test-results-content')
+      
+      resultsPanel.classList.remove('hidden')
+      
+      const resultDiv = document.createElement('div')
+      resultDiv.className = 'mb-4 p-4 border rounded-lg ' + (result.success ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50')
+      resultDiv.innerHTML = `
+        <h4 class="font-medium ${result.success ? 'text-green-800' : 'text-red-800'}">${sourceId}</h4>
+        <pre class="text-sm mt-2 whitespace-pre-wrap max-h-40 overflow-y-auto">${JSON.stringify(result, null, 2)}</pre>
+      `
+      
+      resultsContent.appendChild(resultDiv)
+      resultsContent.scrollTop = resultsContent.scrollHeight
+    }
+    
+    // 绑定到window以供onclick使用
+    window.testSource = testSource
+    window.toggleSource = toggleSource
+    window.editSource = editSource
+  </script>
+</Layout>
