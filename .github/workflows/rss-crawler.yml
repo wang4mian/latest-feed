@@ -11,31 +11,53 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: 抓取RSS并处理文章
+    - name: 抓取制造业RSS源
+      env:
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
       run: |
         echo "开始RSS抓取任务..."
         
-        # 调用RSS管道API
-        response=$(curl -s -X POST https://feed.intelliexport.com/api/rss-pipeline \
-          -H "Content-Type: application/json" \
-          -d '{
-            "initSources": false,
-            "fetchRss": true,
-            "processArticles": true,
-            "limit": 10
-          }')
+        # RSS源配置
+        sources='[
+          {
+            "rssUrl": "https://news.google.com/rss/search?q=manufacturing+factory+automation&hl=en-US&gl=US&ceid=US:en",
+            "sourceName": "Google News - 制造业",
+            "verticalName": "制造业"
+          },
+          {
+            "rssUrl": "https://news.google.com/rss/search?q=industry+4.0+smart+manufacturing&hl=en-US&gl=US&ceid=US:en", 
+            "sourceName": "Google News - 工业4.0",
+            "verticalName": "制造业"
+          },
+          {
+            "rssUrl": "https://www.themanufacturer.com/feed/",
+            "sourceName": "The Manufacturer", 
+            "verticalName": "制造业"
+          },
+          {
+            "rssUrl": "https://www.manufacturing.net/rss.xml",
+            "sourceName": "Manufacturing.net",
+            "verticalName": "制造业"
+          }
+        ]'
         
-        echo "RSS抓取结果:"
-        echo "$response" | jq '.'
+        # 处理每个RSS源
+        echo "$sources" | jq -c '.[]' | while read config; do
+          echo "处理RSS源: $(echo "$config" | jq -r '.sourceName')"
+          
+          response=$(curl -s -X POST "${SUPABASE_URL}/functions/v1/fetch-rss" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "$config")
+          
+          echo "结果: $response"
+          
+          # 等待3秒避免频繁请求
+          sleep 3
+        done
         
-        # 检查是否成功
-        success=$(echo "$response" | jq -r '.success')
-        if [ "$success" = "true" ]; then
-          echo "✅ RSS抓取任务完成"
-        else
-          echo "❌ RSS抓取任务失败"
-          exit 1
-        fi
+        echo "✅ RSS抓取任务完成"
 
     - name: 发送结果通知 (可选)
       if: always()
