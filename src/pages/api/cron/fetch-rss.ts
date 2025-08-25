@@ -10,13 +10,13 @@ export const GET: APIRoute = async ({ request }) => {
 
     console.log('[Cron] Starting scheduled RSS fetch...');
 
-    // 调用现有的RSS处理API
-    const response = await fetch(`${process.env.BASE_URL || 'http://localhost:4321'}/api/process-rss`, {
+    // 调用RSS抓取API
+    const response = await fetch(`${process.env.BASE_URL || 'http://localhost:4321'}/api/fetch-rss`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.CRON_SECRET}`
-      }
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({})
     });
 
     if (!response.ok) {
