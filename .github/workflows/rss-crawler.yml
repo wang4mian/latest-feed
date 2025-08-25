@@ -1,0 +1,43 @@
+name: RSS抓取定时任务
+
+on:
+  schedule:
+    # 每天UTC时间02:00运行 (北京时间10:00)
+    - cron: '0 2 * * *'
+  workflow_dispatch: # 允许手动触发
+
+jobs:
+  crawl-rss:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 抓取RSS并处理文章
+      run: |
+        echo "开始RSS抓取任务..."
+        
+        # 调用RSS管道API
+        response=$(curl -s -X POST https://feed.intelliexport.com/api/rss-pipeline \
+          -H "Content-Type: application/json" \
+          -d '{
+            "initSources": false,
+            "fetchRss": true,
+            "processArticles": true,
+            "limit": 10
+          }')
+        
+        echo "RSS抓取结果:"
+        echo "$response" | jq '.'
+        
+        # 检查是否成功
+        success=$(echo "$response" | jq -r '.success')
+        if [ "$success" = "true" ]; then
+          echo "✅ RSS抓取任务完成"
+        else
+          echo "❌ RSS抓取任务失败"
+          exit 1
+        fi
+
+    - name: 发送结果通知 (可选)
+      if: always()
+      run: |
+        echo "可以在这里添加通知逻辑 (邮件、Slack等)"

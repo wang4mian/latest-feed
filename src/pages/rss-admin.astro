@@ -1,0 +1,175 @@
+---
+import Layout from '@/layouts/Layout.astro'
+---
+
+<Layout title="RSS管理面板">
+  <main class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-8">RSS抓取管理</h1>
+    
+    <!-- 系统状态 -->
+    <div class="mb-8">
+      <h2 class="text-xl font-semibold mb-4">系统状态</h2>
+      <div id="system-status" class="bg-gray-100 p-4 rounded-lg">
+        <div class="text-gray-600">加载中...</div>
+      </div>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="mb-8">
+      <h2 class="text-xl font-semibold mb-4">操作</h2>
+      <div class="space-y-4">
+        
+        <div class="flex items-center space-x-4">
+          <button 
+            id="btn-init-sources" 
+            class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            初始化RSS源
+          </button>
+          <span id="status-init" class="text-sm text-gray-600"></span>
+        </div>
+
+        <div class="flex items-center space-x-4">
+          <button 
+            id="btn-fetch-rss" 
+            class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+          >
+            抓取RSS内容
+          </button>
+          <span id="status-fetch" class="text-sm text-gray-600"></span>
+        </div>
+
+        <div class="flex items-center space-x-4">
+          <button 
+            id="btn-process-articles" 
+            class="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600"
+          >
+            处理文章
+          </button>
+          <span id="status-process" class="text-sm text-gray-600"></span>
+        </div>
+
+        <div class="flex items-center space-x-4">
+          <button 
+            id="btn-full-pipeline" 
+            class="bg-purple-500 text-white px-6 py-3 rounded hover:bg-purple-600 font-semibold"
+          >
+            🚀 运行完整流程
+          </button>
+          <span id="status-pipeline" class="text-sm text-gray-600"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 日志输出 -->
+    <div class="mb-8">
+      <h2 class="text-xl font-semibold mb-4">执行日志</h2>
+      <div id="logs" class="bg-gray-900 text-green-400 p-4 rounded-lg h-64 overflow-y-auto font-mono text-sm">
+        <div>等待操作...</div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // 日志功能
+    function addLog(message, type = 'info') {
+      const logs = document.getElementById('logs');
+      const time = new Date().toLocaleTimeString();
+      const colors = {
+        info: 'text-green-400',
+        success: 'text-green-300', 
+        error: 'text-red-400',
+        warning: 'text-yellow-400'
+      };
+      logs.innerHTML += `<div class="${colors[type]}">[${time}] ${message}</div>`;
+      logs.scrollTop = logs.scrollHeight;
+    }
+
+    // API调用函数
+    async function callAPI(url, method = 'GET', body = null, statusElement = null) {
+      try {
+        if (statusElement) statusElement.textContent = '执行中...';
+        addLog(`调用API: ${method} ${url}`);
+        
+        const options = {
+          method,
+          headers: { 'Content-Type': 'application/json' }
+        };
+        if (body) options.body = JSON.stringify(body);
+        
+        const response = await fetch(url, options);
+        const data = await response.json();
+        
+        if (data.success) {
+          addLog(`✅ ${data.message || '操作成功'}`, 'success');
+          if (statusElement) statusElement.textContent = '✅ 完成';
+        } else {
+          addLog(`❌ ${data.error || '操作失败'}`, 'error');
+          if (statusElement) statusElement.textContent = '❌ 失败';
+        }
+        
+        return data;
+      } catch (error) {
+        addLog(`❌ 网络错误: ${error.message}`, 'error');
+        if (statusElement) statusElement.textContent = '❌ 错误';
+        return { success: false, error: error.message };
+      }
+    }
+
+    // 加载系统状态
+    async function loadSystemStatus() {
+      const data = await callAPI('/api/rss-pipeline');
+      const statusDiv = document.getElementById('system-status');
+      
+      if (data.success) {
+        const overview = data.system_overview;
+        statusDiv.innerHTML = `
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-white p-3 rounded">
+              <h3 class="font-medium">RSS源</h3>
+              <p class="text-sm">${overview.rss_sources.database_sources || 0} 个源</p>
+            </div>
+            <div class="bg-white p-3 rounded">
+              <h3 class="font-medium">RSS条目</h3>
+              <p class="text-sm">${overview.rss_fetching.total_rss_items || 0} 个条目</p>
+            </div>
+            <div class="bg-white p-3 rounded">
+              <h3 class="font-medium">待处理</h3>
+              <p class="text-sm">${overview.article_processing.unprocessed_items || 0} 个</p>
+            </div>
+          </div>
+        `;
+      } else {
+        statusDiv.innerHTML = `<div class="text-red-600">状态加载失败: ${data.error}</div>`;
+      }
+    }
+
+    // 绑定按钮事件
+    document.getElementById('btn-init-sources').addEventListener('click', () => {
+      callAPI('/api/init-rss-sources', 'POST', null, document.getElementById('status-init'));
+    });
+
+    document.getElementById('btn-fetch-rss').addEventListener('click', () => {
+      callAPI('/api/fetch-rss', 'POST', { limit: 10 }, document.getElementById('status-fetch'));
+    });
+
+    document.getElementById('btn-process-articles').addEventListener('click', () => {
+      callAPI('/api/process-rss', 'POST', { limit: 5 }, document.getElementById('status-process'));
+    });
+
+    document.getElementById('btn-full-pipeline').addEventListener('click', () => {
+      callAPI('/api/rss-pipeline', 'POST', {
+        initSources: true,
+        fetchRss: true, 
+        processArticles: true,
+        limit: 5
+      }, document.getElementById('status-pipeline'));
+    });
+
+    // 页面加载时获取状态
+    document.addEventListener('DOMContentLoaded', () => {
+      loadSystemStatus();
+      addLog('RSS管理面板已加载');
+    });
+  </script>
+</Layout>
