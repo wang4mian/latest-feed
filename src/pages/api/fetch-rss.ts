@@ -223,14 +223,15 @@ export const GET: APIRoute = async ({ request }) => {
   try {
     console.log('[RSS-Cron] GET request received, executing RSS fetch...')
     
-    // 创建模拟POST请求来执行RSS抓取
-    const mockRequest = new Request(request.url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sourceIds: [], limit: 10 })
+    // 直接测试简单响应
+    return new Response(JSON.stringify({
+      success: true,
+      message: 'GET method is working - new code deployed!',
+      timestamp: new Date().toISOString(),
+      test: 'This proves new deployment is active'
+    }), {
+      headers: { 'Content-Type': 'application/json' }
     })
-    
-    return await fetchRSSData(mockRequest)
 
   } catch (error) {
     console.error('[RSS-Cron] Error:', error)
