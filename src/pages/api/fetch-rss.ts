@@ -103,28 +103,34 @@ async function fetchRSSData(request: Request) {
         
         console.log(`[RSS-Fetcher] Found ${items.length} items from ${source.name}`)
 
-        // 将条目存储到数据库
-        const rssItems = []
+        // 将条目直接存储为文章
+        const articles = []
         for (const item of items) {
-          const rssItem = {
-            id: `${source.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            rss_source_id: source.id,
-            title: item.title || '无标题',
-            link: item.link || '',
-            description: item.description || '',
-            pub_date: item.pubDate ? new Date(item.pubDate).toISOString() : null,
-            guid: item.guid || item.link || '',
-            processed: false,
-            created_at: new Date().toISOString()
+          const article = {
+            id: `rss_${source.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            source_url: item.link || '',
+            status: 'pending',
+            raw_content: {
+              title: item.title || '无标题',
+              rss_description: item.description || '',
+              source_name: source.name,
+              rss_source_id: source.id,
+              pub_date: item.pubDate,
+              guid: item.guid || item.link
+            },
+            value_score: 50, // 默认评分
+            target_audience: ['制造业从业者'],
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
           }
-          rssItems.push(rssItem)
+          articles.push(article)
         }
 
-        // 批量插入，简化去重逻辑
-        if (rssItems.length > 0) {
+        // 批量插入文章
+        if (articles.length > 0) {
           const { data: insertedItems, error: insertError } = await supabase
-            .from('rss_items')
-            .insert(rssItems)
+            .from('articles')
+            .insert(articles)
             .select()
 
           if (insertError) {
@@ -134,7 +140,7 @@ async function fetchRSSData(request: Request) {
               source_name: source.name,
               success: false,
               error: `数据库插入失败: ${insertError.message}`,
-              items_fetched: rssItems.length,
+              items_fetched: articles.length,
               items_stored: 0
             })
           } else {
@@ -151,9 +157,9 @@ async function fetchRSSData(request: Request) {
               source_id: source.id,
               source_name: source.name,
               success: true,
-              items_fetched: rssItems.length,
+              items_fetched: articles.length,
               items_stored: insertedItems?.length || 0,
-              message: `成功抓取并存储${insertedItems?.length || 0}个条目`
+              message: `成功抓取并存储${insertedItems?.length || 0}个文章`
             })
             
             console.log(`[RSS-Fetcher] ✅ Successfully stored ${insertedItems?.length || 0} items from ${source.name}`)
