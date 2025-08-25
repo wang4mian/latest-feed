@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro'
-import { getRSSSourceById, getActiveRSSSources } from '@/lib/rss-sources'
+import { getActiveRSSSources } from '@/lib/rss-sources'
 import { AIProcessor } from '@/lib/ai-processor'
 import { supabase } from '@/lib/supabase'
 

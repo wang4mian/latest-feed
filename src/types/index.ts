@@ -22,6 +22,8 @@ export interface Article {
   editor_action?: string
   value_score?: number
   target_audience?: TargetAudienceTag[]
+  has_subscription_barrier?: boolean
+  claude_enhancement?: string
   created_at: string
   updated_at?: string
 }

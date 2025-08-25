@@ -1,4 +1,4 @@
-import type { Article, RSSItem } from '@/types'
+import type { Article } from '@/types'
 
 export interface ProcessingResult {
   success: boolean
@@ -41,10 +41,10 @@ export class AIProcessor {
 
       // 2. AI分析
       const aiAnalysis = await this.analyzeWithGemini(crawlResult.content)
-      if (!aiAnalysis.success) {
+      if (!aiAnalysis.success || !aiAnalysis.analysis) {
         return {
           success: false,
-          error: 'AI分析失败: ' + aiAnalysis.error
+          error: 'AI分析失败: ' + (aiAnalysis.error || 'No analysis result')
         }
       }
 
@@ -71,7 +71,7 @@ export class AIProcessor {
         ai_analysis: JSON.stringify(aiAnalysis.analysis),
         ai_translation: aiAnalysis.analysis.translation,
         value_score: aiAnalysis.analysis.value_score,
-        target_audience: aiAnalysis.analysis.target_audience,
+        target_audience: aiAnalysis.analysis.target_audience as any,
         has_subscription_barrier: aiAnalysis.analysis.has_subscription_barrier,
         claude_enhancement: claudeEnhancement ? JSON.stringify(claudeEnhancement) : null,
         created_at: new Date().toISOString(),
@@ -99,7 +99,7 @@ export class AIProcessor {
       const apiKey = process.env.CRAWL4AI_API_KEY
       
       if (!apiKey) {
-        throw new Error('CRAWL4AI_API_KEY未配置')
+        throw new Error('CRAWL4AI_API_KEY environment variable is required but not configured')
       }
       
       // 根据URL选择抓取策略
@@ -224,37 +224,17 @@ export class AIProcessor {
 
   private static async analyzeWithGemini(content: any): Promise<{success: boolean, analysis?: AIAnalysis, error?: string}> {
     try {
-      const prompt = `请分析以下制造业文章并提供JSON格式的分析结果：
-
-标题: ${content.headline}
-正文: ${content.full_text?.substring(0, 3000)}...
-
-请提供以下分析：
-1. 价值评分 (1-10分)：重要性40% + 影响范围30% + 时效性20% + 信息质量10%
-2. 目标受众标签：市场销售、研发技术、供应链采购、企业战略
-3. 关键信息提取
-4. 竞争分析洞察
-5. 中文翻译（300字以内概要）
-6. 订阅壁垒检测
-
-请用以下JSON格式回复：
-{
-  "value_score": 8,
-  "importance_score": 8,
-  "impact_scope": "全球制造业",
-  "timeliness": "高时效性",
-  "information_quality": 9,
-  "target_audience": ["研发技术", "企业战略"],
-  "key_points": ["关键点1", "关键点2"],
-  "competitive_analysis": "竞争分析内容",
-  "translation": "中文翻译内容",
-  "summary": "文章摘要",
-  "has_subscription_barrier": false,
-  "barrier_indicators": []
-}`
-
-      // 模拟Gemini API调用
-      const analysis: AIAnalysis = {
+      const geminiApiKey = process.env.GEMINI_API_KEY
+      
+      // 如果配置了真实的Gemini API Key，使用真实API
+      if (geminiApiKey) {
+        return await this.callRealGeminiAPI(content, geminiApiKey)
+      }
+      
+      // 否则使用模拟数据进行开发和测试
+      console.warn('[AI-Processor] Using mock Gemini analysis - configure GEMINI_API_KEY for real AI analysis')
+      
+      const mockAnalysis: AIAnalysis = {
         value_score: Math.floor(Math.random() * 4) + 7, // 7-10分
         importance_score: Math.floor(Math.random() * 3) + 7,
         impact_scope: '制造业',
@@ -271,18 +251,46 @@ export class AIProcessor {
 
       return {
         success: true,
-        analysis
+        analysis: mockAnalysis
       }
 
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Gemini分析失败'
+        error: error instanceof Error ? error.message : 'AI分析失败'
       }
     }
   }
 
-  private static async enhanceWithClaude(content: any, baseAnalysis: AIAnalysis) {
+  private static async callRealGeminiAPI(_content: any, _apiKey: string): Promise<{success: boolean, analysis?: AIAnalysis, error?: string}> {
+    try {
+      // TODO: 实现真实的Gemini API调用
+      // 准备提示词和API调用逻辑
+      // const prompt = `请分析以下制造业文章...`;
+      // const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent', {
+      //   method: 'POST',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //     'Authorization': `Bearer ${_apiKey}`
+      //   },
+      //   body: JSON.stringify({
+      //     contents: [{
+      //       parts: [{ text: prompt }]
+      //     }]
+      //   })
+      // })
+      
+      throw new Error('Real Gemini API integration not yet implemented')
+
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Gemini API调用失败'
+      }
+    }
+  }
+
+  private static async enhanceWithClaude(_content: any, _baseAnalysis: AIAnalysis) {
     try {
       // 模拟Claude增强分析
       return {
@@ -300,6 +308,6 @@ export class AIProcessor {
   }
 
   private static generateId(): string {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2)
+    return Date.now().toString(36) + Math.random().toString(36).substring(2)
   }
 }

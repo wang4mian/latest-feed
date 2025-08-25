@@ -15,12 +15,12 @@ export const GET: APIRoute = async ({ url }) => {
 
     const filters: WorkbenchFilters = {
       status: status.length > 0 ? status as any[] : ['adopted'],
-      category: category || undefined,
+      ...(category && { category }),
       sort_by: sort_by as 'created_at' | 'value_score',
       sort_order: sort_order as 'asc' | 'desc'
     }
 
-    const { data: articles, error, total } = await getWorkbenchArticles(filters, page, limit)
+    const { data: articles, error } = await getWorkbenchArticles(filters, page, limit)
 
     if (error) {
       return new Response(JSON.stringify({
@@ -32,6 +32,8 @@ export const GET: APIRoute = async ({ url }) => {
       })
     }
 
+    const totalCount = articles?.length || 0
+    
     return new Response(JSON.stringify({
       success: true,
       data: {
@@ -39,8 +41,8 @@ export const GET: APIRoute = async ({ url }) => {
         pagination: {
           page,
           limit,
-          total: total || 0,
-          pages: Math.ceil((total || 0) / limit)
+          total: totalCount,
+          pages: Math.ceil(totalCount / limit)
         },
         filters
       }
@@ -92,7 +94,7 @@ export const POST: APIRoute = async ({ request }) => {
   }
 }
 
-async function batchUpdateStatus(data: any) {
+async function batchUpdateStatus(_data: any) {
   // TODO: 实现批量状态更新
   return new Response(JSON.stringify({
     success: true,

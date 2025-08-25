@@ -39,7 +39,7 @@ export const POST: APIRoute = async ({ request }) => {
     // 逐个处理RSS条目
     for (const item of unprocessedItems) {
       try {
-        console.log(`处理RSS条目: ${item.title} - ${item.link}`)
+        console.log(`[RSS-Processor] Starting processing: ${item.title} - ${item.link}`)
         
         // 使用crawl4AI + AI分析处理文章
         const processingResult = await AIProcessor.processArticle(item.link, false)
@@ -62,15 +62,15 @@ export const POST: APIRoute = async ({ request }) => {
             .single()
 
           if (insertError) {
-            console.error('文章存储失败:', insertError)
+            console.error(`[RSS-Processor] Article storage failed for ${item.title}:`, insertError)
             results.push({
               rss_item_id: item.id,
               success: false,
-              error: insertError.message
+              error: `Storage error: ${insertError.message}`
             })
           } else {
             // 标记RSS条目为已处理，并关联文章
-            await supabase
+            const updateResult = await supabase
               .from('rss_items')
               .update({ 
                 processed: true,
@@ -78,6 +78,10 @@ export const POST: APIRoute = async ({ request }) => {
                 updated_at: new Date().toISOString()
               })
               .eq('id', item.id)
+
+            if (updateResult.error) {
+              console.warn(`[RSS-Processor] Failed to update RSS item status for ${item.title}:`, updateResult.error)
+            }
 
             results.push({
               rss_item_id: item.id,
@@ -87,11 +91,11 @@ export const POST: APIRoute = async ({ request }) => {
               processing_time: processingResult.processing_time
             })
             
-            console.log(`✅ 处理成功: ${item.title}`)
+            console.log(`[RSS-Processor] ✅ Successfully processed: ${item.title} (${processingResult.processing_time}ms)`)
           }
         } else {
           // 处理失败，仍然标记为已处理避免重复
-          await supabase
+          const markProcessedResult = await supabase
             .from('rss_items')
             .update({ 
               processed: true,
@@ -99,34 +103,42 @@ export const POST: APIRoute = async ({ request }) => {
             })
             .eq('id', item.id)
 
+          if (markProcessedResult.error) {
+            console.warn(`[RSS-Processor] Failed to mark RSS item as processed for ${item.title}:`, markProcessedResult.error)
+          }
+
           results.push({
             rss_item_id: item.id,
             success: false,
-            error: processingResult.error || '文章处理失败'
+            error: processingResult.error || 'Article processing failed'
           })
           
-          console.log(`❌ 处理失败: ${item.title} - ${processingResult.error}`)
+          console.log(`[RSS-Processor] ❌ Processing failed: ${item.title} - ${processingResult.error}`)
         }
         
         // 避免请求过于频繁
         await new Promise(resolve => setTimeout(resolve, 1000))
         
       } catch (itemError) {
-        console.error(`处理RSS条目出错 (${item.id}):`, itemError)
+        console.error(`[RSS-Processor] Unexpected error processing RSS item ${item.id} (${item.title}):`, itemError)
         
         // 标记为已处理避免卡住
-        await supabase
-          .from('rss_items')
-          .update({ 
-            processed: true,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', item.id)
+        try {
+          await supabase
+            .from('rss_items')
+            .update({ 
+              processed: true,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', item.id)
+        } catch (updateError) {
+          console.error(`[RSS-Processor] Failed to mark item as processed after error:`, updateError)
+        }
 
         results.push({
           rss_item_id: item.id,
           success: false,
-          error: itemError instanceof Error ? itemError.message : '处理异常'
+          error: itemError instanceof Error ? itemError.message : 'Unexpected processing error'
         })
       }
     }

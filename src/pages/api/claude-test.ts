@@ -58,7 +58,7 @@ export const POST: APIRoute = async ({ request }) => {
   }
 }
 
-async function testQualityAssessment(data: any) {
+async function testQualityAssessment(_data: any) {
   // 模拟Claude质量评估
   const mockResult = {
     overall_score: 8.5,
@@ -88,7 +88,7 @@ async function testQualityAssessment(data: any) {
   })
 }
 
-async function testTitleOptimization(data: any) {
+async function testTitleOptimization(_data: any) {
   const mockResult = {
     original_title: '示例原始标题',
     optimized_titles: [
@@ -111,7 +111,7 @@ async function testTitleOptimization(data: any) {
   })
 }
 
-async function testSocialMediaGeneration(data: any) {
+async function testSocialMediaGeneration(_data: any) {
   const mockResult = {
     weibo: {
       content: '🏭【制造业前沿】AI赋能智能工厂，生产效率提升300%！全球制造业正迎来数字化转型的关键节点，这些技术突破值得关注👇 #智能制造 #工业40 #AI技术',
@@ -137,7 +137,7 @@ async function testSocialMediaGeneration(data: any) {
   })
 }
 
-async function testCompetitiveAnalysis(data: any) {
+async function testCompetitiveAnalysis(_data: any) {
   const mockResult = {
     key_players: [
       { name: 'Siemens', role: '工业自动化领导者', market_position: 'strong' },
@@ -169,7 +169,7 @@ async function testCompetitiveAnalysis(data: any) {
   })
 }
 
-async function testBatchProcessing(data: any) {
+async function testBatchProcessing(_data: any) {
   const mockResult = {
     processed_count: 5,
     success_rate: 0.8,
@@ -191,7 +191,7 @@ async function testBatchProcessing(data: any) {
   })
 }
 
-async function testCompilation(data: any) {
+async function testCompilation(_data: any) {
   const mockResult = {
     original_title: 'Revolutionary AI Technology Transforms Manufacturing Efficiency',
     compiled_title: '🤖 AI技术革命性突破：制造业效率提升新纪元',

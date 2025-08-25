@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro'
 import { supabase } from '@/lib/supabase'
 
-export const GET: APIRoute = async ({ url, request }) => {
+export const GET: APIRoute = async ({ request }) => {
   try {
     const searchParams = new URL(request.url).searchParams
     const category = searchParams.get('category')
@@ -23,11 +23,8 @@ export const GET: APIRoute = async ({ url, request }) => {
 
       if (categoryRssSources && categoryRssSources.length > 0) {
         const validSourceUrls = categoryRssSources.map(source => source.url)
-        // 构建OR查询
-        const orConditions = validSourceUrls
-          .map(url => `raw_content->>source_url.eq.${url}`)
-          .join(',')
-        query = query.or(orConditions)
+        // 通过source_url字段直接匹配
+        query = query.in('source_url', validSourceUrls)
       }
     }
 

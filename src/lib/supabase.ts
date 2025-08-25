@@ -1,10 +1,21 @@
 import { createClient } from '@supabase/supabase-js'
-import type { Article, WorkbenchFilters, RSSSource, ArticleStatus } from '@/types'
+import type { WorkbenchFilters, ArticleStatus } from '@/types'
 
 const supabaseUrl = import.meta.env.SUPABASE_URL
 const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY
 
+if (!supabaseUrl) {
+  throw new Error('Missing required environment variable: SUPABASE_URL')
+}
+
+if (!supabaseServiceKey) {
+  throw new Error('Missing required environment variable: SUPABASE_SERVICE_ROLE_KEY')
+}
+
 export const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+// 重新导出类型以供其他模块使用
+export type { WorkbenchFilters }
 
 // 获取工作台文章
 export async function getWorkbenchArticles(filters: WorkbenchFilters, page = 1, limit = 20) {
@@ -41,10 +52,8 @@ export async function getWorkbenchArticles(filters: WorkbenchFilters, page = 1, 
 
     if (categoryRssSources && categoryRssSources.length > 0) {
       const validSourceUrls = categoryRssSources.map(source => source.url)
-      // 通过raw_content中的source_name匹配
-      query = query.or(
-        validSourceUrls.map(url => `raw_content->>source_url.eq.${url}`).join(',')
-      )
+      // 通过source_url字段直接匹配
+      query = query.in('source_url', validSourceUrls)
     }
   }
 
