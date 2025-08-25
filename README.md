@@ -145,5 +145,43 @@ npm run build
 - [ ] 编辑工作流完善
 - [ ] 用户权限管理
 
+## 🔧 故障排查与解决记录
+
+### RSS定时抓取问题修复历程
+
+#### 问题1：Supabase Cron限制
+**症状**：尝试使用Supabase pg_cron时HTTP扩展不可用
+**解决**：改用Vercel Cron（更稳定可靠）
+
+#### 问题2：Vercel函数路由404
+**症状**：`/api/cron/fetch-rss` 返回404 NOT_FOUND
+**原因**：Astro嵌套API路由在Vercel上识别问题
+**解决**：使用扁平路由结构，改为 `/api/fetch-rss`
+
+#### 问题3：数据库表结构问题  
+**症状**：`"there is no unique or exclusion constraint matching the ON CONFLICT specification"`
+**原因**：代码中使用upsert但数据库无对应约束
+**解决**：简化为直接insert操作，移除upsert逻辑
+
+#### 问题4：GET vs POST请求问题
+**症状**：Vercel Cron调用成功但不执行RSS抓取
+**原因**：Vercel Cron发送GET请求，但RSS抓取逻辑在POST方法中
+**解决**：修改GET方法，使其也能执行RSS抓取
+
+#### 问题5：数据表设计优化
+**症状**：原设计使用rss_items中间表
+**优化**：直接将RSS内容存储为articles，简化数据流程
+
+### 最终解决方案
+```
+Vercel Cron → GET /api/fetch-rss → 直接执行RSS抓取 → 存储到articles表
+```
+
+**关键配置：**
+- `vercel.json`中配置cron任务
+- GET和POST方法都支持RSS抓取
+- 直接存储为articles（status: pending）
+- 每日3次自动执行（8点、14点、20点）
+
 ---
-*最后更新: 2025-08-25 - RSS定时抓取系统部署完成*
+*最后更新: 2025-08-25 - RSS定时抓取系统完全修复并投入生产*
