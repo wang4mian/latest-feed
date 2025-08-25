@@ -1,4 +1,10 @@
 {
+  "crons": [
+    {
+      "path": "/api/cron/fetch-rss",
+      "schedule": "0 8,14,20 * * *"
+    }
+  ],
   "functions": {
     "**/*.astro": {
       "runtime": "nodejs18.x"

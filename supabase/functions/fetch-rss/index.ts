@@ -105,6 +105,7 @@ serve(async (req) => {
 
   try {
     console.log('[Supabase RSS] Starting RSS fetch process...')
+    // 暂时取消认证检查，允许数据库内部调用
     
     // 初始化Supabase客户端
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
