@@ -219,69 +219,24 @@ async function fetchRSSData(request: Request) {
   }
 }
 
-export const GET: APIRoute = async () => {
+export const GET: APIRoute = async ({ request }) => {
   try {
-    // 获取RSS源的抓取状态统计
-    const { data: sources, error: sourceError } = await supabase
-      .from('rss_sources')
-      .select('*')
-      .eq('is_active', true)
+    console.log('[RSS-Cron] GET request received, executing RSS fetch...')
     
-    if (sourceError) {
-      throw new Error(sourceError.message)
-    }
-
-    const { data: articles, error: articleError } = await supabase
-      .from('articles')
-      .select('raw_content, created_at')
-      .order('created_at', { ascending: false })
-    
-    if (articleError) {
-      throw new Error(articleError.message)
-    }
-
-    // 统计每个RSS源的文章数量和最新文章时间
-    const sourceStats = sources?.map(source => {
-      const sourceArticles = articles?.filter(article => 
-        article.raw_content && article.raw_content.rss_source_id === source.id
-      ) || []
-      const latestArticle = sourceArticles[0] // 因为已按时间降序排列
-      
-      return {
-        source_id: source.id,
-        source_name: source.name,
-        source_url: source.url,
-        last_crawled_at: source.last_crawled_at,
-        total_items: sourceArticles.length,
-        latest_item_at: latestArticle?.created_at || null,
-        is_active: source.is_active
-      }
-    }) || []
-
-    const totalSources = sourceStats.length
-    const recentlyActive = sourceStats.filter(s => {
-      if (!s.last_crawled_at) return false
-      const lastCrawl = new Date(s.last_crawled_at)
-      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
-      return lastCrawl > oneHourAgo
-    }).length
-
-    return new Response(JSON.stringify({
-      success: true,
-      stats: {
-        total_active_sources: totalSources,
-        recently_crawled: recentlyActive,
-        total_rss_items: articles?.length || 0,
-        source_details: sourceStats
-      }
-    }), {
-      headers: { 'Content-Type': 'application/json' }
+    // 创建模拟POST请求来执行RSS抓取
+    const mockRequest = new Request(request.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sourceIds: [], limit: 10 })
     })
+    
+    return await fetchRSSData(mockRequest)
 
   } catch (error) {
+    console.error('[RSS-Cron] Error:', error)
     return new Response(JSON.stringify({
       success: false,
-      error: error instanceof Error ? error.message : '获取RSS统计失败'
+      error: error instanceof Error ? error.message : 'RSS抓取失败'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
