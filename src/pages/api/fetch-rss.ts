@@ -231,27 +231,29 @@ export const GET: APIRoute = async () => {
       throw new Error(sourceError.message)
     }
 
-    const { data: items, error: itemError } = await supabase
-      .from('rss_items')
-      .select('rss_source_id, created_at')
+    const { data: articles, error: articleError } = await supabase
+      .from('articles')
+      .select('raw_content, created_at')
       .order('created_at', { ascending: false })
     
-    if (itemError) {
-      throw new Error(itemError.message)
+    if (articleError) {
+      throw new Error(articleError.message)
     }
 
-    // 统计每个RSS源的条目数量和最新条目时间
+    // 统计每个RSS源的文章数量和最新文章时间
     const sourceStats = sources?.map(source => {
-      const sourceItems = items?.filter(item => item.rss_source_id === source.id) || []
-      const latestItem = sourceItems[0] // 因为已按时间降序排列
+      const sourceArticles = articles?.filter(article => 
+        article.raw_content && article.raw_content.rss_source_id === source.id
+      ) || []
+      const latestArticle = sourceArticles[0] // 因为已按时间降序排列
       
       return {
         source_id: source.id,
         source_name: source.name,
         source_url: source.url,
         last_crawled_at: source.last_crawled_at,
-        total_items: sourceItems.length,
-        latest_item_at: latestItem?.created_at || null,
+        total_items: sourceArticles.length,
+        latest_item_at: latestArticle?.created_at || null,
         is_active: source.is_active
       }
     }) || []
@@ -269,7 +271,7 @@ export const GET: APIRoute = async () => {
       stats: {
         total_active_sources: totalSources,
         recently_crawled: recentlyActive,
-        total_rss_items: items?.length || 0,
+        total_rss_items: articles?.length || 0,
         source_details: sourceStats
       }
     }), {
