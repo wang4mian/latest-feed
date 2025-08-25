@@ -3,8 +3,8 @@
 基于Astro + Supabase + AI的制造业新闻情报处理系统，实现RSS源自动抓取、AI智能分析、文章筛选与编辑发布的全流程自动化。
 
 ## 🔄 工作流程
-1. **RSS定时抓取** (Supabase cron) → `rss_items`表
-2. **智能处理** (每10分钟调用`/api/process-rss`) → crawl4AI内容抓取 → AI分析评分 → `articles`表
+1. **RSS定时抓取** (Vercel Cron) → 每天8点、14点、20点自动抓取RSS → `rss_items`表
+2. **智能处理** → Crawl4AI内容抓取 → Gemini AI分析评分 → `articles`表
 3. **文章池筛选** (`/articles`) → 人工采用/忽略决策
 4. **编辑台编译** (`/workbench`) → Doocs MD编辑器 → 发布
 
@@ -18,32 +18,52 @@
 
 ## 环境配置
 ```bash
+# Gemini AI (必需)
+GEMINI_API_KEY=your_gemini_key
+
 # Crawl4AI Cloud
 CRAWL4AI_CLOUD_URL=https://www.crawl4ai-cloud.com/query
-CRAWL4AI_API_KEY=your_key
+CRAWL4AI_API_KEY=your_crawl4ai_key
 
 # Supabase
-SUPABASE_URL=your_url
-SUPABASE_SERVICE_ROLE_KEY=your_key
+SUPABASE_URL=your_supabase_url
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+SUPABASE_ANON_KEY=your_anon_key
+
+# Vercel Cron Security
+CRON_SECRET=your_cron_secret
 ```
 
-## Supabase定时任务设置
-```sql
-CREATE EXTENSION IF NOT EXISTS pg_cron;
-CREATE EXTENSION IF NOT EXISTS http;
+## ⏰ 自动化定时任务
 
-SELECT cron.schedule(
-    'process-rss-items-auto',
-    '*/10 * * * *',
-    $$
-    SELECT net.http_post(
-        url := 'https://feed.intelliexport.com/api/process-rss',
-        headers := '{"Content-Type": "application/json"}'::jsonb,
-        body := '{"limit": 5}'::jsonb
-    );
-    $$
-);
+### RSS抓取定时任务 (Vercel Cron)
+```json
+// vercel.json
+{
+  "crons": [
+    {
+      "path": "/api/fetch-rss",
+      "schedule": "0 8,14,20 * * *"
+    }
+  ]
+}
 ```
+
+**执行时间：** 每天8点、14点、20点自动执行RSS抓取
+
+**手动触发RSS抓取：**
+```bash
+curl -X POST https://feed.intelliexport.com/api/fetch-rss \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+### RSS源管理
+系统支持多种RSS源：
+- Google News 搜索 (制造业、工业4.0、AI制造等关键词)
+- 3D Printing Industry
+- 行业专业媒体 RSS feeds
+- 可通过 `/api/rss-sources` 管理启用/禁用状态
 
 ## 页面
 - `/` - 首页
@@ -52,18 +72,48 @@ SELECT cron.schedule(
 - `/workbench` - 编辑台（Doocs MD编辑器）
 
 ## 🔌 API接口
-- `GET /api/health` - 系统健康检查与环境变量状态
-- `POST /api/process-rss` - 批量处理RSS条目
+
+### RSS相关
+- `POST /api/fetch-rss` - RSS抓取 (支持cron调用)
+- `GET /api/fetch-rss` - RSS源统计信息  
+- `POST /api/process-rss` - 批量处理RSS条目为文章
+
+### 文章管理
 - `GET /api/articles` - 获取文章列表
 - `POST /api/articles/update` - 更新文章状态
-- `GET /api/stats` - 系统统计数据
+- `GET /api/articles/[id]` - 获取单篇文章
+
+### 系统工具
+- `GET /api/health` - 系统健康检查
+- `GET /api/stats` - 系统统计数据  
 - `POST /api/test-crawl` - 单篇文章抓取测试
+- `GET /api/ping` - 基础连通性测试
 
 ## 🚀 部署状态
 - ✅ Vercel自动部署
-- ✅ Node.js 18.x运行时
+- ✅ Node.js 18.x运行时  
 - ✅ Serverless Functions
-- ✅ 自定义域名支持
+- ✅ 自定义域名: `feed.intelliexport.com`
+- ✅ Vercel Cron定时任务
+- ✅ Supabase数据库集成
+
+## 📊 系统监控
+
+### 查看RSS抓取状态
+```bash
+# 查看RSS源统计
+curl https://feed.intelliexport.com/api/fetch-rss
+
+# 查看系统健康状态
+curl https://feed.intelliexport.com/api/health
+
+# 查看整体数据统计  
+curl https://feed.intelliexport.com/api/stats
+```
+
+### Vercel部署监控
+- Vercel Dashboard → Functions 查看cron执行日志
+- Vercel Dashboard → Deployments 查看部署状态
 
 ## 💻 本地开发
 ```bash
@@ -77,5 +127,23 @@ npm run dev
 npm run build
 ```
 
+## ✅ 项目完成状态
+
+### 已实现功能
+- [x] RSS源多渠道抓取（3D打印、制造业、工业4.0等）
+- [x] Vercel Cron自动定时任务（每日3次）
+- [x] Crawl4AI智能内容提取
+- [x] Gemini AI内容分析与评分
+- [x] Supabase数据库存储与管理
+- [x] 响应式Web界面
+- [x] API接口完善
+- [x] 生产环境部署
+
+### 待优化功能
+- [ ] 文章去重算法优化
+- [ ] AI分析准确性提升  
+- [ ] 编辑工作流完善
+- [ ] 用户权限管理
+
 ---
-*最后更新: 2025-08-25*
+*最后更新: 2025-08-25 - RSS定时抓取系统部署完成*
