@@ -17,7 +17,8 @@ interface RSSChannel {
   items: RSSItem[]
 }
 
-export const POST: APIRoute = async ({ request }) => {
+// 共用的RSS抓取逻辑
+async function fetchRSSData(request: Request) {
   try {
     const { sourceIds = [], limit = 10 } = await request.json().catch(() => ({}))
     
