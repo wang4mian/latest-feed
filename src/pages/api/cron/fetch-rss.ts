@@ -10,28 +10,10 @@ export const GET: APIRoute = async ({ request }) => {
 
     console.log('[Cron] Starting scheduled RSS fetch...');
 
-    // 调用RSS抓取API
-    const response = await fetch(`${process.env.BASE_URL || 'http://localhost:4321'}/api/fetch-rss`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({})
-    });
-
-    if (!response.ok) {
-      throw new Error(`RSS processing failed: ${response.status}`);
-    }
-
-    const result = await response.json();
-    
-    console.log('[Cron] RSS fetch completed:', result);
-
     return new Response(JSON.stringify({
       success: true,
-      message: 'RSS fetch completed successfully',
-      timestamp: new Date().toISOString(),
-      result
+      message: 'Cron endpoint working! RSS fetch functionality will be implemented here.',
+      timestamp: new Date().toISOString()
     }), {
       status: 200,
       headers: {
