@@ -36,7 +36,15 @@
 			"dest": "_render"
 		},
 		{
+			"src": "^\\/api\\/fetch-rss\\/?$",
+			"dest": "_render"
+		},
+		{
 			"src": "^\\/api\\/health\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/init-rss-sources\\/?$",
 			"dest": "_render"
 		},
 		{
@@ -49,6 +57,10 @@
 		},
 		{
 			"src": "^\\/api\\/raw\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/rss-pipeline\\/?$",
 			"dest": "_render"
 		},
 		{
