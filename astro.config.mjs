@@ -7,8 +7,7 @@ export default defineConfig({
   output: 'server',
   adapter: vercel({
     functionPerRoute: false,
-    edgeMiddleware: false,
-    runtime: 'nodejs20.x'  // 强制使用Node.js 20
+    edgeMiddleware: false
   }),
   server: {
     port: 4321,
