@@ -12,5 +12,11 @@ export default defineConfig({
   server: {
     port: 4321,
     host: true
+  },
+  vite: {
+    ssr: {
+      // 确保这些依赖被正确打包到Serverless函数中
+      noExternal: ['cookie', 'set-cookie-parser']
+    }
   }
 });
