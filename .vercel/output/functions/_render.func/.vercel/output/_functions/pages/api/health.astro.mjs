@@ -8,8 +8,8 @@ const GET = async () => {
       environment: {
         node_version: process.version,
         runtime: "nodejs",
-        has_supabase_url: true,
-        has_supabase_key: true,
+        has_supabase_url: !!process.env.SUPABASE_URL,
+        has_supabase_key: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
         has_crawl4ai_key: !!process.env.CRAWL4AI_API_KEY,
         has_gemini_key: !!process.env.GEMINI_API_KEY
       }
