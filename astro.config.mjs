@@ -15,8 +15,8 @@ export default defineConfig({
   },
   vite: {
     ssr: {
-      // 打包所有依赖，避免模块找不到的问题
-      noExternal: true
+      // 只在生产环境打包所有依赖，避免模块找不到的问题
+      noExternal: process.env.NODE_ENV === 'production' ? true : ['@supabase/supabase-js']
     }
   }
 });
