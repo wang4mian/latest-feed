@@ -5,10 +5,12 @@ const supabaseUrl = import.meta.env.SUPABASE_URL
 const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY
 
 if (!supabaseUrl) {
+  console.error('[Supabase] Missing SUPABASE_URL environment variable')
   throw new Error('Missing required environment variable: SUPABASE_URL')
 }
 
 if (!supabaseServiceKey) {
+  console.error('[Supabase] Missing SUPABASE_SERVICE_ROLE_KEY environment variable')  
   throw new Error('Missing required environment variable: SUPABASE_SERVICE_ROLE_KEY')
 }
 

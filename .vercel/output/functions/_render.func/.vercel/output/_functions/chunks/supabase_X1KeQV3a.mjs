@@ -21,9 +21,7 @@ async function getWorkbenchArticles(filters, page = 1, limit = 20) {
     const { data: categoryRssSources } = await supabase.from("rss_sources").select("url").eq("category", filters.category).eq("is_active", true);
     if (categoryRssSources && categoryRssSources.length > 0) {
       const validSourceUrls = categoryRssSources.map((source) => source.url);
-      query = query.or(
-        validSourceUrls.map((url) => `raw_content->>source_url.eq.${url}`).join(",")
-      );
+      query = query.in("source_url", validSourceUrls);
     }
   }
   query = query.order(filters.sort_by, { ascending: filters.sort_order === "asc" });

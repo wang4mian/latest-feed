@@ -2,7 +2,7 @@
 import { c as createComponent, a as createAstro, m as maybeRenderHead, b as addAttribute, e as renderTemplate, f as renderComponent, F as Fragment } from '../chunks/astro/server_0DBvwa-7.mjs';
 import 'kleur/colors';
 import { $ as $$Layout } from '../chunks/Layout_D1faHx2S.mjs';
-import { s as supabase } from '../chunks/supabase_Dfi1qjCo.mjs';
+import { s as supabase } from '../chunks/supabase_X1KeQV3a.mjs';
 /* empty css                                 */
 export { renderers } from '../renderers.mjs';
 

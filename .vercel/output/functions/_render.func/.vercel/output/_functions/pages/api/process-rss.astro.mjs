@@ -1,5 +1,5 @@
-import { s as supabase } from '../../chunks/supabase_Dfi1qjCo.mjs';
-import { A as AIProcessor } from '../../chunks/ai-processor_B47LiXIQ.mjs';
+import { s as supabase } from '../../chunks/supabase_X1KeQV3a.mjs';
+import { A as AIProcessor } from '../../chunks/ai-processor_0sFIcAI9.mjs';
 export { renderers } from '../../renderers.mjs';
 
 const POST = async ({ request }) => {
@@ -27,7 +27,7 @@ const POST = async ({ request }) => {
     const results = [];
     for (const item of unprocessedItems) {
       try {
-        console.log(`处理RSS条目: ${item.title} - ${item.link}`);
+        console.log(`[RSS-Processor] Starting processing: ${item.title} - ${item.link}`);
         const processingResult = await AIProcessor.processArticle(item.link, false);
         if (processingResult.success && processingResult.article) {
           processingResult.article.source_url = item.link;
@@ -39,18 +39,21 @@ const POST = async ({ request }) => {
           };
           const { data: article, error: insertError } = await supabase.from("articles").insert([processingResult.article]).select().single();
           if (insertError) {
-            console.error("文章存储失败:", insertError);
+            console.error(`[RSS-Processor] Article storage failed for ${item.title}:`, insertError);
             results.push({
               rss_item_id: item.id,
               success: false,
-              error: insertError.message
+              error: `Storage error: ${insertError.message}`
             });
           } else {
-            await supabase.from("rss_items").update({
+            const updateResult = await supabase.from("rss_items").update({
               processed: true,
               article_id: article.id,
               updated_at: (/* @__PURE__ */ new Date()).toISOString()
             }).eq("id", item.id);
+            if (updateResult.error) {
+              console.warn(`[RSS-Processor] Failed to update RSS item status for ${item.title}:`, updateResult.error);
+            }
             results.push({
               rss_item_id: item.id,
               article_id: article.id,
@@ -58,31 +61,38 @@ const POST = async ({ request }) => {
               title: item.title,
               processing_time: processingResult.processing_time
             });
-            console.log(`✅ 处理成功: ${item.title}`);
+            console.log(`[RSS-Processor] ✅ Successfully processed: ${item.title} (${processingResult.processing_time}ms)`);
           }
         } else {
+          const markProcessedResult = await supabase.from("rss_items").update({
+            processed: true,
+            updated_at: (/* @__PURE__ */ new Date()).toISOString()
+          }).eq("id", item.id);
+          if (markProcessedResult.error) {
+            console.warn(`[RSS-Processor] Failed to mark RSS item as processed for ${item.title}:`, markProcessedResult.error);
+          }
+          results.push({
+            rss_item_id: item.id,
+            success: false,
+            error: processingResult.error || "Article processing failed"
+          });
+          console.log(`[RSS-Processor] ❌ Processing failed: ${item.title} - ${processingResult.error}`);
+        }
+        await new Promise((resolve) => setTimeout(resolve, 1e3));
+      } catch (itemError) {
+        console.error(`[RSS-Processor] Unexpected error processing RSS item ${item.id} (${item.title}):`, itemError);
+        try {
           await supabase.from("rss_items").update({
             processed: true,
             updated_at: (/* @__PURE__ */ new Date()).toISOString()
           }).eq("id", item.id);
-          results.push({
-            rss_item_id: item.id,
-            success: false,
-            error: processingResult.error || "文章处理失败"
-          });
-          console.log(`❌ 处理失败: ${item.title} - ${processingResult.error}`);
+        } catch (updateError) {
+          console.error(`[RSS-Processor] Failed to mark item as processed after error:`, updateError);
         }
-        await new Promise((resolve) => setTimeout(resolve, 1e3));
-      } catch (itemError) {
-        console.error(`处理RSS条目出错 (${item.id}):`, itemError);
-        await supabase.from("rss_items").update({
-          processed: true,
-          updated_at: (/* @__PURE__ */ new Date()).toISOString()
-        }).eq("id", item.id);
         results.push({
           rss_item_id: item.id,
           success: false,
-          error: itemError instanceof Error ? itemError.message : "处理异常"
+          error: itemError instanceof Error ? itemError.message : "Unexpected processing error"
         });
       }
     }

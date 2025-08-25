@@ -1,7 +1,7 @@
-import { s as supabase } from '../../chunks/supabase_Dfi1qjCo.mjs';
+import { s as supabase } from '../../chunks/supabase_X1KeQV3a.mjs';
 export { renderers } from '../../renderers.mjs';
 
-const GET = async ({ url, request }) => {
+const GET = async ({ request }) => {
   try {
     const searchParams = new URL(request.url).searchParams;
     const category = searchParams.get("category");
@@ -10,8 +10,7 @@ const GET = async ({ url, request }) => {
       const { data: categoryRssSources } = await supabase.from("rss_sources").select("url").eq("category", category).eq("is_active", true);
       if (categoryRssSources && categoryRssSources.length > 0) {
         const validSourceUrls = categoryRssSources.map((source) => source.url);
-        const orConditions = validSourceUrls.map((url2) => `raw_content->>source_url.eq.${url2}`).join(",");
-        query = query.or(orConditions);
+        query = query.in("source_url", validSourceUrls);
       }
     }
     const { data: articles, error } = await query;

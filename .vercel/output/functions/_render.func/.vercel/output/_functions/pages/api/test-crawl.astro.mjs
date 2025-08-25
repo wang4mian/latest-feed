@@ -1,5 +1,5 @@
-import { A as AIProcessor } from '../../chunks/ai-processor_B47LiXIQ.mjs';
-import { s as supabase } from '../../chunks/supabase_Dfi1qjCo.mjs';
+import { A as AIProcessor } from '../../chunks/ai-processor_0sFIcAI9.mjs';
+import { s as supabase } from '../../chunks/supabase_X1KeQV3a.mjs';
 export { renderers } from '../../renderers.mjs';
 
 const RSS_SOURCES = [

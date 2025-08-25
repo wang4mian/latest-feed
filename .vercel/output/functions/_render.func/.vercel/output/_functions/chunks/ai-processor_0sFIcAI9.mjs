@@ -10,10 +10,10 @@ class AIProcessor {
         };
       }
       const aiAnalysis = await this.analyzeWithGemini(crawlResult.content);
-      if (!aiAnalysis.success) {
+      if (!aiAnalysis.success || !aiAnalysis.analysis) {
         return {
           success: false,
-          error: "AI分析失败: " + aiAnalysis.error
+          error: "AI分析失败: " + (aiAnalysis.error || "No analysis result")
         };
       }
       let claudeEnhancement = null;
@@ -60,7 +60,7 @@ class AIProcessor {
       const crawlApiUrl = process.env.CRAWL4AI_CLOUD_URL || "https://www.crawl4ai-cloud.com/query";
       const apiKey = process.env.CRAWL4AI_API_KEY;
       if (!apiKey) {
-        throw new Error("CRAWL4AI_API_KEY未配置");
+        throw new Error("CRAWL4AI_API_KEY environment variable is required but not configured");
       }
       const strategy = this.selectCrawlStrategy(url);
       const requestBody = {
@@ -162,35 +162,12 @@ class AIProcessor {
   }
   static async analyzeWithGemini(content) {
     try {
-      const prompt = `请分析以下制造业文章并提供JSON格式的分析结果：
-
-标题: ${content.headline}
-正文: ${content.full_text?.substring(0, 3e3)}...
-
-请提供以下分析：
-1. 价值评分 (1-10分)：重要性40% + 影响范围30% + 时效性20% + 信息质量10%
-2. 目标受众标签：市场销售、研发技术、供应链采购、企业战略
-3. 关键信息提取
-4. 竞争分析洞察
-5. 中文翻译（300字以内概要）
-6. 订阅壁垒检测
-
-请用以下JSON格式回复：
-{
-  "value_score": 8,
-  "importance_score": 8,
-  "impact_scope": "全球制造业",
-  "timeliness": "高时效性",
-  "information_quality": 9,
-  "target_audience": ["研发技术", "企业战略"],
-  "key_points": ["关键点1", "关键点2"],
-  "competitive_analysis": "竞争分析内容",
-  "translation": "中文翻译内容",
-  "summary": "文章摘要",
-  "has_subscription_barrier": false,
-  "barrier_indicators": []
-}`;
-      const analysis = {
+      const geminiApiKey = process.env.GEMINI_API_KEY;
+      if (geminiApiKey) {
+        return await this.callRealGeminiAPI(content, geminiApiKey);
+      }
+      console.warn("[AI-Processor] Using mock Gemini analysis - configure GEMINI_API_KEY for real AI analysis");
+      const mockAnalysis = {
         value_score: Math.floor(Math.random() * 4) + 7,
         // 7-10分
         importance_score: Math.floor(Math.random() * 3) + 7,
@@ -207,16 +184,26 @@ class AIProcessor {
       };
       return {
         success: true,
-        analysis
+        analysis: mockAnalysis
       };
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Gemini分析失败"
+        error: error instanceof Error ? error.message : "AI分析失败"
       };
     }
   }
-  static async enhanceWithClaude(content, baseAnalysis) {
+  static async callRealGeminiAPI(_content, _apiKey) {
+    try {
+      throw new Error("Real Gemini API integration not yet implemented");
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Gemini API调用失败"
+      };
+    }
+  }
+  static async enhanceWithClaude(_content, _baseAnalysis) {
     try {
       return {
         quality_assessment: "高质量制造业内容",
@@ -232,7 +219,7 @@ class AIProcessor {
     }
   }
   static generateId() {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2);
+    return Date.now().toString(36) + Math.random().toString(36).substring(2);
   }
 }
 

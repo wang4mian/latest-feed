@@ -1,4 +1,4 @@
-import { g as getWorkbenchArticles } from '../../chunks/supabase_Dfi1qjCo.mjs';
+import { g as getWorkbenchArticles } from '../../chunks/supabase_X1KeQV3a.mjs';
 export { renderers } from '../../renderers.mjs';
 
 const GET = async ({ url }) => {
@@ -12,11 +12,11 @@ const GET = async ({ url }) => {
     const limit = parseInt(searchParams.get("limit") || "20");
     const filters = {
       status: status.length > 0 ? status : ["adopted"],
-      category: category || void 0,
+      ...category && { category },
       sort_by,
       sort_order
     };
-    const { data: articles, error, total } = await getWorkbenchArticles(filters, page, limit);
+    const { data: articles, error } = await getWorkbenchArticles(filters, page, limit);
     if (error) {
       return new Response(JSON.stringify({
         success: false,
@@ -26,6 +26,7 @@ const GET = async ({ url }) => {
         headers: { "Content-Type": "application/json" }
       });
     }
+    const totalCount = articles?.length || 0;
     return new Response(JSON.stringify({
       success: true,
       data: {
@@ -33,8 +34,8 @@ const GET = async ({ url }) => {
         pagination: {
           page,
           limit,
-          total: total || 0,
-          pages: Math.ceil((total || 0) / limit)
+          total: totalCount,
+          pages: Math.ceil(totalCount / limit)
         },
         filters
       }
@@ -79,7 +80,7 @@ const POST = async ({ request }) => {
     });
   }
 };
-async function batchUpdateStatus(data) {
+async function batchUpdateStatus(_data) {
   return new Response(JSON.stringify({
     success: true,
     data: { updated_count: 0 }
