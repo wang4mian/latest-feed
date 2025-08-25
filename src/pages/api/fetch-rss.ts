@@ -120,14 +120,11 @@ async function fetchRSSData(request: Request) {
           rssItems.push(rssItem)
         }
 
-        // 批量插入，避免重复（基于guid）
+        // 批量插入，简化去重逻辑
         if (rssItems.length > 0) {
           const { data: insertedItems, error: insertError } = await supabase
             .from('rss_items')
-            .upsert(rssItems, {
-              onConflict: 'guid',
-              ignoreDuplicates: true
-            })
+            .insert(rssItems)
             .select()
 
           if (insertError) {
