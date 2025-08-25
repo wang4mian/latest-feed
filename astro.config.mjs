@@ -15,8 +15,8 @@ export default defineConfig({
   },
   vite: {
     ssr: {
-      // 确保这些依赖被正确打包到Serverless函数中
-      noExternal: ['cookie', 'set-cookie-parser']
+      // 打包所有依赖，避免模块找不到的问题
+      noExternal: true
     }
   }
 });

@@ -1,4 +1,4 @@
-import { g as getWorkbenchArticles } from '../../chunks/supabase_X1KeQV3a.mjs';
+import { g as getWorkbenchArticles } from '../../chunks/supabase_DhlB0YS7.mjs';
 export { renderers } from '../../renderers.mjs';
 
 const GET = async ({ url }) => {

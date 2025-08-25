@@ -1,6 +1,4 @@
-import { c as createComponent, a as createAstro, b as addAttribute, r as renderHead, d as renderSlot, e as renderTemplate } from './astro/server_0DBvwa-7.mjs';
-import 'kleur/colors';
-import 'clsx';
+import { c as createComponent, a as createAstro, b as addAttribute, r as renderHead, d as renderSlot, e as renderTemplate } from './astro/server_BM2aJuEc.mjs';
 
 const $$Astro = createAstro();
 const $$Layout = createComponent(($$result, $$props, $$slots) => {

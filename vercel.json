@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "**/*.astro": {
+      "runtime": "nodejs18.x"
+    },
+    "**/*.ts": {
+      "runtime": "nodejs18.x"
+    },
+    "**/*.js": {
+      "runtime": "nodejs18.x"
+    }
+  }
+}
